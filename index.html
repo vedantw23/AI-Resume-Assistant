@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Resume Analyzer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page-bg"></div>
+
+  <header class="hero shell">
+    <div class="eyebrow">Resume analysis</div>
+    <h1>AI Resume Analyzer</h1>
+    <p class="hero-copy">
+      Upload a resume, read the text in your browser, score it, compare it with a job post, and get simple fix ideas.
+    </p>
+    <div class="hero-badges">
+      <span>Browser only</span>
+      <span>PDF + DOCX</span>
+    </div>
+  </header>
+
+  <main class="shell layout">
+    <section class="panel upload-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">01. Upload</p>
+          <h2>Upload Resume</h2>
+        </div>
+        <div class="status-dot" id="analysisStatusDot" title="Idle"></div>
+      </div>
+
+      <label class="dropzone" id="dropzone" for="resumeFile">
+        <input id="resumeFile" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
+        <div class="dropzone-inner">
+          <div class="drop-icon">⬆</div>
+          <strong>Drop resume here or click to upload</strong>
+          <span>PDF or DOCX only. Text is read in your browser.</span>
+        </div>
+      </label>
+
+      <div class="meta-grid" id="fileMeta">
+        <div class="meta-card">
+          <span>File</span>
+          <strong id="fileName">No file loaded</strong>
+        </div>
+        <div class="meta-card">
+          <span>Words</span>
+          <strong id="wordCount">0</strong>
+        </div>
+        <div class="meta-card">
+          <span>Sections</span>
+          <strong id="sectionCount">0</strong>
+        </div>
+        <div class="meta-card">
+          <span>Type</span>
+          <strong id="fileType">Unknown</strong>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <button class="primary-btn" id="analyzeBtn" type="button" disabled>Analyze</button>
+        <button class="secondary-btn" id="matchBtn" type="button" disabled>Match Job</button>
+        <button class="ghost-btn" id="fixBtn" type="button" disabled>Fix Resume</button>
+      </div>
+
+      <div class="inline-status" id="statusMessage">Upload a resume to start.</div>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">02. Preview</p>
+          <h2>Resume Text</h2>
+        </div>
+      </div>
+
+      <div class="section-pills" id="sectionPills"></div>
+
+      <div class="preview-grid">
+        <div class="preview-card">
+          <div class="preview-card-head">
+            <h3>Sections</h3>
+            <span>Auto found</span>
+          </div>
+          <div class="detected-sections" id="detectedSections">
+            <div class="empty-state">Upload a file to see sections.</div>
+          </div>
+        </div>
+
+        <div class="preview-card">
+          <div class="preview-card-head">
+            <h3>Text</h3>
+            <span>Clean view</span>
+          </div>
+          <pre class="resume-text" id="resumeText">Your extracted resume text will appear here.</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel dashboard-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">03. Analysis</p>
+          <h2>ATS Score</h2>
+        </div>
+      </div>
+
+      <div class="score-shell">
+        <div class="score-card">
+          <div class="score-row">
+            <div>
+              <span class="score-label">ATS score</span>
+              <strong class="score-value" id="atsScore">--</strong>
+            </div>
+            <div class="score-ring" id="atsRing">
+              <span>ATS</span>
+            </div>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="atsProgress"></div>
+          </div>
+          <p class="score-caption" id="scoreCaption">Run analysis to see the score and tips.</p>
+        </div>
+
+        <div class="summary-grid">
+          <div class="list-card">
+            <h3>Best sectors</h3>
+            <div id="sectorList" class="chip-list">
+              <span class="empty-state">No result yet.</span>
+            </div>
+          </div>
+          <div class="list-card">
+            <h3>Strengths</h3>
+            <ul id="strengthsList" class="bullet-list">
+              <li class="empty-state">No analysis yet.</li>
+            </ul>
+          </div>
+          <div class="list-card">
+            <h3>Weaknesses</h3>
+            <ul id="weaknessesList" class="bullet-list">
+              <li class="empty-state">No analysis yet.</li>
+            </ul>
+          </div>
+          <div class="list-card">
+            <h3>Missing Keywords</h3>
+            <div id="keywordsList" class="chip-list">
+              <span class="empty-state">No analysis yet.</span>
+            </div>
+          </div>
+          <div class="list-card wide-card">
+            <h3>Tips</h3>
+            <div id="suggestionsList" class="suggestions-list">
+              <div class="empty-state">Tips will appear here.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel matcher-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">04. Match</p>
+          <h2>Job Match</h2>
+        </div>
+      </div>
+
+      <label class="textarea-wrap">
+        <span>Paste job description</span>
+        <textarea id="jobDescription" rows="8" placeholder="Paste the job description here."></textarea>
+      </label>
+
+      <div class="matcher-actions">
+        <button class="primary-btn" id="runMatchBtn" type="button" disabled>Check Match</button>
+      </div>
+
+      <div class="match-summary">
+        <div class="match-score">
+          <span>Match %</span>
+          <strong id="matchScore">--</strong>
+        </div>
+        <div class="match-score">
+          <span>Matched skills</span>
+          <strong id="matchedSkillsCount">0</strong>
+        </div>
+        <div class="match-score">
+          <span>Missing skills</span>
+          <strong id="missingSkillsCount">0</strong>
+        </div>
+      </div>
+
+      <div class="match-grid">
+        <div class="list-card">
+          <h3>Missing Skills</h3>
+          <ul id="missingSkillsList" class="bullet-list">
+            <li class="empty-state">Paste a job description and run the match analysis.</li>
+          </ul>
+        </div>
+        <div class="list-card">
+          <h3>Suggested Keywords</h3>
+          <div id="suggestedKeywordsList" class="chip-list">
+            <span class="empty-state">No keyword suggestions yet.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel rewrite-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">05. Rewrite</p>
+          <h2>Fix Resume</h2>
+        </div>
+      </div>
+
+      <div class="rewrite-grid">
+        <div class="rewrite-card">
+          <h3>Original Text</h3>
+          <pre class="rewrite-text" id="originalText">Upload a resume to see the source text.</pre>
+        </div>
+        <div class="rewrite-card">
+          <h3>Improved Version</h3>
+          <pre class="rewrite-text" id="improvedText">Click "Fix Resume" after uploading a resume.</pre>
+        </div>
+      </div>
+
+      <div class="rewrite-actions">
+        <button class="ghost-btn" id="copyImprovedBtn" type="button" disabled>Copy text</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shell footer">
+    Built for browser-only resume analysis.
+  </footer>
+</body>
+</html>
