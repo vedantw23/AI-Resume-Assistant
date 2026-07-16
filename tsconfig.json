@@ -18,6 +18,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "vite.config.ts", "tailwind.config.ts", "eslint.config.js"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src"]
 }
