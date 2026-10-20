@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from 'react';
-import { extractResumeText, rewriteEntireResume, rewriteSection } from '@/services/ai';
 import { buildLocalAnalysis, buildLocalMatch, buildLocalRewrite } from '@/services/resumeAnalysis';
 import { countWords, detectSections, extractTextFromFile, normalizeText } from '@/services/parsing';
 import type { AiRewriteResult, AnalysisResult, MatchResult, ParsedResume, ResumeSection } from '@/types/resume';
@@ -73,14 +72,8 @@ export function useResumeAssistant() {
 
         setBusy(true, `Reading ${file.name}...`);
 
-        let text = '';
-        try {
-          const remoteExtract = await extractResumeText(file);
-          text = normalizeText(remoteExtract.text);
-        } catch {
-          const rawText = await extractTextFromFile(file);
-          text = normalizeText(rawText);
-        }
+        const rawText = await extractTextFromFile(file);
+        const text = normalizeText(rawText);
 
         if (!text) {
           throw new Error('No text found in the file.');
@@ -88,16 +81,7 @@ export function useResumeAssistant() {
 
         const sections = detectSections(text);
         const analysis = buildLocalAnalysis(text, sections, state.jobDescription);
-        let rewritePreview: AiRewriteResult;
-        try {
-          const remoteResult = await rewriteEntireResume({
-            resumeText: text,
-            jobDescription: '',
-          });
-          rewritePreview = normalizeRewriteResult(remoteResult, 'entire', null, text);
-        } catch {
-          rewritePreview = buildLocalEntireRewrite(text, sections, analysis, null);
-        }
+        const rewritePreview = buildLocalEntireRewrite(text, sections, analysis, null);
 
         setState((current) => ({
           ...current,
@@ -216,34 +200,15 @@ export function useResumeAssistant() {
     }
 
     setBusy(true, 'Fixing the selected section...');
-    try {
-      const remoteResult = await rewriteSection({
-        resumeText: state.text,
-        sectionTitle: section.title,
-        sectionText: section.content,
-        jobDescription: state.jobDescription,
-      });
-
-      setState((current) => ({
-        ...current,
-        rewrite: normalizeRewriteResult(remoteResult, 'section', section.title, section.content),
-        status: 'success',
-        statusMessage: 'Selected section improved.',
-        error: null,
-      }));
-    } catch (error) {
-      const fallback = buildLocalSectionRewrite(state.text, state.sections, section.title, state.analysis, state.match);
-      const message = error instanceof Error ? error.message : 'Something went wrong.';
-      setState((current) => ({
-        ...current,
-        rewrite: fallback,
-        status: 'success',
-        statusMessage: `Local rewrite used because the AI service is not available. ${message}`,
-        error: null,
-      }));
-    } finally {
-      setState((current) => ({ ...current, isBusy: false }));
-    }
+    const rewrite = buildLocalSectionRewrite(state.text, state.sections, section.title, state.analysis, state.match);
+    setState((current) => ({
+      ...current,
+      rewrite,
+      status: 'success',
+      statusMessage: 'Selected section improved locally.',
+      isBusy: false,
+      error: null,
+    }));
   }, [setBusy, setStatus, state.analysis, state.jobDescription, state.match, state.sections, state.selectedSectionTitle, state.text]);
 
   const improveEntireResume = useCallback(async () => {
@@ -253,32 +218,15 @@ export function useResumeAssistant() {
     }
 
     setBusy(true, 'Improving the full resume...');
-    try {
-      const remoteResult = await rewriteEntireResume({
-        resumeText: state.text,
-        jobDescription: state.jobDescription,
-      });
-
-      setState((current) => ({
-        ...current,
-        rewrite: normalizeRewriteResult(remoteResult, 'entire', null, state.text),
-        status: 'success',
-        statusMessage: 'Full resume improved.',
-        error: null,
-      }));
-    } catch (error) {
-      const fallback = buildLocalEntireRewrite(state.text, state.sections, state.analysis, state.match);
-      const message = error instanceof Error ? error.message : 'Something went wrong.';
-      setState((current) => ({
-        ...current,
-        rewrite: fallback,
-        status: 'success',
-        statusMessage: `Local rewrite used because the AI service is not available. ${message}`,
-        error: null,
-      }));
-    } finally {
-      setState((current) => ({ ...current, isBusy: false }));
-    }
+    const rewrite = buildLocalEntireRewrite(state.text, state.sections, state.analysis, state.match);
+    setState((current) => ({
+      ...current,
+      rewrite,
+      status: 'success',
+      statusMessage: 'Full resume improved locally.',
+      isBusy: false,
+      error: null,
+    }));
   }, [setBusy, setStatus, state.analysis, state.jobDescription, state.match, state.sections, state.text]);
 
   const applyChanges = useCallback(() => {
@@ -419,23 +367,6 @@ function buildLocalEntireRewrite(
       atsImpact: 'Medium' as const,
     })),
     warnings: [],
-  };
-}
-
-function normalizeRewriteResult(
-  result: AiRewriteResult,
-  mode: 'section' | 'entire',
-  sectionTitle: string | null,
-  fallbackOriginalText: string,
-): AiRewriteResult {
-  return {
-    mode,
-    sectionTitle: result.sectionTitle ?? sectionTitle,
-    originalText: result.originalText || fallbackOriginalText,
-    improvedText: result.improvedText,
-    summary: result.summary,
-    changes: result.changes || [],
-    warnings: result.warnings || [],
   };
 }
 
