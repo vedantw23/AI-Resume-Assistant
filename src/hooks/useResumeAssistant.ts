@@ -87,7 +87,7 @@ export function useResumeAssistant() {
         }
 
         const sections = detectSections(text);
-        const analysis = buildLocalAnalysis(text, sections);
+        const analysis = buildLocalAnalysis(text, sections, state.jobDescription);
         let rewritePreview: AiRewriteResult;
         try {
           const remoteResult = await rewriteEntireResume({
@@ -135,7 +135,7 @@ export function useResumeAssistant() {
         setState((current) => ({ ...current, isBusy: false }));
       }
     },
-    [setBusy],
+    [setBusy, state.jobDescription],
   );
 
   const analyze = useCallback(() => {
@@ -146,7 +146,7 @@ export function useResumeAssistant() {
 
     setBusy(true, 'Analyzing resume...');
     try {
-      const analysis = buildLocalAnalysis(state.text, state.sections);
+      const analysis = buildLocalAnalysis(state.text, state.sections, state.jobDescription);
       setState((current) => ({
         ...current,
         analysis,
@@ -179,8 +179,10 @@ export function useResumeAssistant() {
     setBusy(true, 'Checking match...');
     try {
       const matchResult = buildLocalMatch(state.text, state.jobDescription);
+      const analysis = buildLocalAnalysis(state.text, state.sections, state.jobDescription);
       setState((current) => ({
         ...current,
+        analysis,
         match: matchResult,
         status: 'success',
         statusMessage: 'Match done.',
@@ -291,7 +293,7 @@ export function useResumeAssistant() {
     }
 
     const nextSections = detectSections(nextText);
-    const nextAnalysis = buildLocalAnalysis(nextText, nextSections);
+    const nextAnalysis = buildLocalAnalysis(nextText, nextSections, state.jobDescription);
     setState((current) => ({
       ...current,
       text: nextText,
@@ -310,7 +312,7 @@ export function useResumeAssistant() {
       ...current,
       text: current.originalText,
       sections: detectSections(current.originalText),
-      analysis: buildLocalAnalysis(current.originalText, detectSections(current.originalText)),
+      analysis: buildLocalAnalysis(current.originalText, detectSections(current.originalText), current.jobDescription),
       rewrite: null,
       selectedSectionTitle: detectSections(current.originalText)[0]?.title ?? '',
       status: 'success',

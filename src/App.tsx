@@ -202,7 +202,65 @@ export function App() {
 
           <Panel className="space-y-5">
             <SectionHeading
-              eyebrow="02. Preview"
+              eyebrow="02. Job description"
+              title="Compare with a job description"
+              description="Paste the job posting you want to target, then compare it with your uploaded resume."
+            />
+
+            <textarea
+              aria-label="Job description"
+              className="min-h-56 w-full resize-y rounded-[18px] border border-border bg-slate-50 p-4 text-sm leading-7 text-text-primary outline-none transition placeholder:text-text-secondary/70 focus:border-primary focus:ring-4 focus:ring-primary/10"
+              disabled={!hasResume || assistant.isBusy}
+              onChange={(event) => assistant.setJobDescription(event.target.value)}
+              placeholder="Paste the complete job description here..."
+              value={assistant.jobDescription}
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-text-secondary">
+                {assistant.jobDescription.trim() ? `${assistant.jobDescription.trim().split(/\s+/).length} words added` : 'No job description added yet.'}
+              </p>
+              <Button disabled={!hasResume || !assistant.jobDescription.trim() || assistant.isBusy} onClick={assistant.match}>
+                {assistant.isBusy ? 'Comparing...' : 'Compare resume'}
+              </Button>
+            </div>
+
+            {assistant.matchResult ? (
+              <div className="grid gap-4 rounded-[18px] border border-primary/15 bg-primary/5 p-5 sm:grid-cols-[auto_1fr] sm:items-center">
+                <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white text-primary shadow-sm">
+                  <span className="text-3xl font-bold">{assistant.matchResult.matchPercentage}%</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide">match</span>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm leading-6 text-text-secondary">{assistant.matchResult.summary}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-success">Matched skills</p>
+                      <p className="mt-1 text-sm text-text-secondary">
+                        {assistant.matchResult.matchedSkills.length ? assistant.matchResult.matchedSkills.join(', ') : 'No matching skills found yet.'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-warning">Missing skills</p>
+                      <p className="mt-1 text-sm text-text-secondary">
+                        {assistant.matchResult.missingSkills.length ? assistant.matchResult.missingSkills.join(', ') : 'No major missing skills found.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
+                title="No comparison yet"
+                description="Upload your resume, paste a job description, and select Compare resume."
+              />
+            )}
+          </Panel>
+
+          <Panel className="space-y-5">
+            <SectionHeading
+              eyebrow="03. Preview"
               title="Resume preview"
               description="See the extracted text and the main sections we found."
             />
@@ -252,7 +310,7 @@ export function App() {
         <section className="mt-6 grid gap-6">
           <Panel className="space-y-5">
             <SectionHeading
-              eyebrow="03. Analysis"
+              eyebrow="04. Analysis"
               title="ATS score and improvement ideas"
               description="See your score, strong points, weak points, and missing keywords."
             />

@@ -1,7 +1,7 @@
 import type { AnalysisResult, MatchResult, RewrittenSection, RewriteResult, ResumeSection } from '@/types/resume';
 import { countWords, normalizeText } from '@/services/parsing';
 
-export function buildLocalAnalysis(text: string, sections: ResumeSection[]): AnalysisResult {
+export function buildLocalAnalysis(text: string, sections: ResumeSection[], jobDescription = ''): AnalysisResult {
   const normalized = text.toLowerCase();
   const wordCount = countWords(text);
   const skillHits = scoreSkillKeywords(normalized);
@@ -22,7 +22,15 @@ export function buildLocalAnalysis(text: string, sections: ResumeSection[]): Ana
   const structureScore = scoreStructure(wordCount, sections, sectionPresence, contactPresence);
   const foundationScore = scoreFoundation(sectionPresence, contactPresence, hasEducation);
 
-  const score = clampScore(foundationScore * 0.25 + keywordScore * 0.3 + impactScore * 0.25 + structureScore * 0.2);
+  // Normalize each raw component before combining it. The helpers use different
+  // ranges; combining their raw values makes most resumes converge on one score.
+  const baseScore =
+    (foundationScore / 68) * 25 +
+    (keywordScore / 80) * 30 +
+    (impactScore / 48) * 25 +
+    (structureScore / 33) * 20;
+  const jobMatchScore = jobDescription.trim() ? buildLocalMatch(text, jobDescription).matchPercentage : null;
+  const score = clampScore(jobMatchScore === null ? baseScore : baseScore * 0.65 + jobMatchScore * 0.35);
 
   const missingKeywords = findMissingKeywords(normalized, sectorMatches);
   const strengths = buildStrengths(hasExperience, hasProjects, hasEducation, hasMetrics, hasActionVerbs, skillHits, sections);
